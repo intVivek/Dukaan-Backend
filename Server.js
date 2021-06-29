@@ -78,17 +78,21 @@ for(var i = 1; i < 14062; i ++){
 
 **/
 app.post('/product',(req, res) => {
-	var {search,page,sort,filterPrice,isAssured}=req.body;
+	var {search,page,sort,filterPrice,isAssured,filterRating}=req.body;
 	console.log(req.body);
 	if(search){
 		search=search.charAt(0).toUpperCase() + search.slice(1).toLowerCase();
 	}
 	if(!filterPrice){
-		filterPrice=''
+		filterPrice='';
+	}
+	if(!filterRating){
+		filterRating='';
 	}
 	var assured=isAssured?" and assured = 'true'":"";
 	
-	var q='select * from products where product_category_tree like BINARY ? '+filterPrice+assured+' ORDER BY '+sort+' limit ?,24';
+	var q='select * from products where product_category_tree like BINARY ? '+filterPrice+assured+filterRating+' ORDER BY '+sort+' limit ?,2';
+	console.log(q);
 	db.query(q,['%'+search+'%',24*(page-1)],(error, results) => {
 		db.query('select count(*) as count from products where product_category_tree like BINARY ? '+filterPrice,'%'+search+'%',(err, result) => {
 			console.log(results);
