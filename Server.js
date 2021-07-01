@@ -16,7 +16,8 @@ const db = mysql.createConnection({
 	user: 'root',
 	database: 'ecommerce',
 	password: '1+2=Three',
-	port: '3306'
+	port: '3306',
+	debug: true
 });
 
 db.connect(function (err) {
@@ -78,7 +79,7 @@ for(var i = 1; i < 14062; i ++){
 
 **/
 app.post('/product',(req, res) => {
-	var {search,page,sort,filterPrice,isAssured,filterRating}=req.body;
+	var {search,page,sort,filterPrice,isAssured,filterRating,filterBrand}=req.body;
 	console.log(req.body);
 	if(search){
 		search=search.charAt(0).toUpperCase() + search.slice(1).toLowerCase();
@@ -89,17 +90,38 @@ app.post('/product',(req, res) => {
 	if(!filterRating){
 		filterRating='';
 	}
+	var brand='';
+	if(Object.keys(filterBrand).length>0){
+		console.log(Object.keys(filterBrand).length);
+		for (const [key, value] of Object.entries(filterBrand)) {
+			brand+=",'"+key+"'";
+		}
+		brand=brand.replace(",","");
+		brand ="and brand IN ("+brand+")";
+	}
 	var assured=isAssured?" and assured = 'true'":"";
-	
-	var q='select * from products where product_category_tree like BINARY ? '+filterPrice+assured+filterRating+' ORDER BY '+sort+' limit ?,2';
-	console.log(q);
-	db.query(q,['%'+search+'%',24*(page-1)],(error, results) => {
-		db.query('select count(*) as count from products where product_category_tree like BINARY ? '+filterPrice,'%'+search+'%',(err, result) => {
-			console.log(results);
-			res.json([results,result[0]]);
+	var names =" id,product_name,retail_price,discounted_price,image,assured,product_rating,product_specifications ";
+	var q='select'+names+'from products where product_category_tree like BINARY ? '+filterPrice+assured+filterRating+brand+' ORDER BY '+sort+' limit ?,24';
+	db.query(q,['%'+search+'%',24*(page-1)],(error, result1) => {
+		db.query('select count(*) as count from products where product_category_tree like BINARY ? '+filterPrice+assured+filterRating+brand,'%'+search+'%',(err, result2) => {
+			db.query('select distinct brand as brand from products where product_category_tree like BINARY ? '+filterPrice+assured+filterRating,'%'+search+'%',(err, result3) => {
+				res.json([result1,result2[0],result3]);
+			});
 		});
 	});
 });
+
+
+
+app.post('/openProduct',(req, res) => {
+	var {id}=req.body;
+	db.query('select * from products where id =?',id,(err, result) => {
+		console.log(id,result);
+		res.json(result);
+	});
+});
+
+
 
 app.post('/login', (req, res, next) => {
 	console.log(req.body);
