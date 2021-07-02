@@ -80,7 +80,6 @@ for(var i = 1; i < 14062; i ++){
 **/
 app.post('/product',(req, res) => {
 	var {search,page,sort,filterPrice,isAssured,filterRating,filterBrand}=req.body;
-	console.log(req.body);
 	if(search){
 		search=search.charAt(0).toUpperCase() + search.slice(1).toLowerCase();
 	}
@@ -92,7 +91,6 @@ app.post('/product',(req, res) => {
 	}
 	var brand='';
 	if(Object.keys(filterBrand).length>0){
-		console.log(Object.keys(filterBrand).length);
 		for (const [key, value] of Object.entries(filterBrand)) {
 			brand+=",'"+key+"'";
 		}
@@ -114,20 +112,42 @@ app.post('/product',(req, res) => {
 
 
 app.post('/openProduct',(req, res) => {
-	var {id}=req.body;
-	db.query('select * from products where id =?',id,(err, result) => {
-		console.log(id,result);
+	var {user_id}=req.body;
+	db.query('select * from products where id =?',user_id,(err, result) => {
 		res.json(result);
 	});
 });
 
+app.post('/addToCart',(req, res) => {
+	var {user_id,product_id}=req.body;
+	console.log('add',req.body);
+	db.query('insert into cart (user_id,product_id) values (?,?)',[user_id,product_id],(err, result) => {
+		res.status(200).json({
+			status: 0,
+		});
+	});
+});
 
+app.post('/deleteFromCart',(req, res) => {
+	var {cart_id}=req.body;
+	console.log('remove',req.body);
+	db.query('delete from cart where id=?',cart_id,(err, result) => {
+		res.status(200).json({
+			status: 0,
+		});
+	});
+});
+
+app.post('/openCart',(req, res) => {
+	var {user_id,product_id}=req.body;
+	db.query('select count(user_id) as quantity,cart.id as cart_id,image,product_name,retail_price,discounted_price,products.id from products inner join cart on products.id=cart.product_id where cart.user_id=? group by product_id  order by created_at desc',user_id,(err, result) => {
+		res.status(200).json(result);
+	});
+});
 
 app.post('/login', (req, res, next) => {
-	console.log(req.body);
 	passport.authenticate('local', (error, user, authInfo) => {
 		if (!user) {
-			console.log(authInfo);
 			return res.status(403).json([authInfo,null]);
 		}
 
@@ -138,7 +158,6 @@ app.post('/login', (req, res, next) => {
 });
 
 app.post('/register', (req, res) => {
-	console.log(req.body);
 	const { name, email, number, password } = req.body;
 	if(name!==''){
 		if (validator.isEmail(email)) {
