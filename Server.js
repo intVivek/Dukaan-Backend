@@ -16,8 +16,7 @@ const db = mysql.createConnection({
 	user: 'root',
 	database: 'ecommerce',
 	password: '1+2=Three',
-	port: '3306',
-	debug: true
+	port: '3306'
 });
 
 db.connect(function (err) {
@@ -27,12 +26,14 @@ db.connect(function (err) {
 
 const getUserByEmail = (email, done) => {
 	db.query('select id,name,email,password,number from user where email = ?', email, (error, results) => {
+		
 		done(results[0]);
 	});
 }
 
 const getUserByid = (id, done) => {
 	db.query('select id,name,email,password,number from user where id = ?', id, (error, results) => {
+		
 		done(results[0]);
 	});
 }
@@ -99,10 +100,13 @@ app.post('/product',(req, res) => {
 	}
 	var assured=isAssured?" and assured = 'true'":"";
 	var names =" id,product_name,retail_price,discounted_price,image,assured,product_rating,product_specifications ";
-	var q='select'+names+'from products where product_category_tree like BINARY ? '+filterPrice+assured+filterRating+brand+' ORDER BY '+sort+' limit ?,24';
+	var q='select'+names+'from products where product_category_tree like BINARY ? '+filterPrice+assured+filterRating+brand+' ORDER BY RAND() limit ?,24';
 	db.query(q,['%'+search+'%',24*(page-1)],(error, result1) => {
+		
 		db.query('select count(*) as count from products where product_category_tree like BINARY ? '+filterPrice+assured+filterRating+brand,'%'+search+'%',(err, result2) => {
+			
 			db.query('select distinct brand as brand from products where product_category_tree like BINARY ? '+filterPrice+assured+filterRating,'%'+search+'%',(err, result3) => {
+				
 				res.json([result1,result2[0],result3]);
 			});
 		});
@@ -114,14 +118,27 @@ app.post('/product',(req, res) => {
 app.post('/openProduct',(req, res) => {
 	var {user_id}=req.body;
 	db.query('select * from products where id =?',user_id,(err, result) => {
+		
 		res.json(result);
 	});
 });
 
-app.post('/addToCart',(req, res) => {
-	var {user_id,product_id}=req.body;
-	console.log('add',req.body);
-	db.query('insert into cart (user_id,product_id) values (?,?)',[user_id,product_id],(err, result) => {
+app.post('/addTo',(req, res) => {
+	var {user_id,product_id,table}=req.body;
+	var q='insert into '+table+' (user_id,product_id) values (?,?)'
+	db.query(q,[user_id,product_id],(err, result) => {
+		console.log(q,req.body);
+		res.status(200).json({
+			status: 0,
+		});
+	});
+});
+
+app.post('/buyNow',(req, res) => {
+	var {user_id,product_id,price,quantity}=req.body;
+	var q='insert into orders (user_id,product_id,price,quantity) values (?,?,?,?)'
+	db.query(q,[user_id,product_id,price,quantity],(err, result) => {
+		console.log(q,req.body);
 		res.status(200).json({
 			status: 0,
 		});
@@ -129,9 +146,10 @@ app.post('/addToCart',(req, res) => {
 });
 
 app.post('/deleteFromCart',(req, res) => {
-	var {cart_id}=req.body;
+	var {product_id,limit}=req.body;
 	console.log('remove',req.body);
-	db.query('delete from cart where id=?',cart_id,(err, result) => {
+	db.query('delete from cart where product_id=? '+limit,product_id,(err, result) => {
+		
 		res.status(200).json({
 			status: 0,
 		});
@@ -139,9 +157,36 @@ app.post('/deleteFromCart',(req, res) => {
 });
 
 app.post('/openCart',(req, res) => {
-	var {user_id,product_id}=req.body;
-	db.query('select count(user_id) as quantity,cart.id as cart_id,image,product_name,retail_price,discounted_price,products.id from products inner join cart on products.id=cart.product_id where cart.user_id=? group by product_id  order by created_at desc',user_id,(err, result) => {
+	var {user_id}=req.body;
+	db.query('select count(product_id) as quantity,cart.id as cart_id,image,product_name,retail_price,discounted_price,products.id as product_id from products inner join cart on products.id=cart.product_id where cart.user_id=? group by product_id order by max(created_at) desc',user_id,(err, result) => {
 		res.status(200).json(result);
+	});
+});
+
+app.post('/cartBill',(req, res) => {
+	var {user_id}=req.body;
+	db.query('select count(product_id) as quantity,retail_price,discounted_price from products inner join cart on products.id=cart.product_id where cart.user_id=? group by product_id',user_id,(err, result) => {
+		res.status(200).json(result);
+	});
+});
+
+app.post('/openOrders',(req, res) => {
+	var {user_id}=req.body;
+	console.log(req.body);
+	db.query('select orders.id as orders_id,image,product_name,price,products.id,quantity,created_at as date from products inner join orders on products.id=orders.product_id where orders.user_id=? order by created_at desc',user_id,(err, result) => {
+		res.status(200).json(result);
+	});
+});
+
+app.post('/cartOrderAll',(req, res) => {
+	var {user_id}=req.body;
+	var q='insert into orders (user_id,product_id,quantity,price) select user_id,products.id,count(product_id) as quantity,discounted_price from products inner join cart on products.id=cart.product_id where cart.user_id=? group by product_id';
+	db.query(q,user_id,(err, result) => {
+		db.query('delete from cart where user_id = ?',user_id,(err, results) => {
+			res.status(200).json({
+				status: 0,
+			});
+		});
 	});
 });
 
@@ -169,6 +214,7 @@ app.post('/register', (req, res) => {
 							var data = [name, email, hashedPass, number];
 							var q = 'insert into user ( name , email , password , number ) values (?)';
 							db.query(q, [data], function (error, results, fields) {
+								
 								if (error) throw error;
 								else {
 									res.status(200).json({
