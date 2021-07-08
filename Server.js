@@ -123,6 +123,15 @@ app.post('/openProduct',(req, res) => {
 	});
 });
 
+
+app.post('/home',(req, res) => {
+	var {user_id,pageNum}=req.body;
+	db.query('select product_name,retail_price,discounted_price,image,product_rating,assured,id from products order by RAND() limit ?,40',24*(pageNum-1),(err, result) => {
+		console.log('yes');
+		res.json(result);
+	});
+});
+
 app.post('/addTo',(req, res) => {
 	var {user_id,product_id,table}=req.body;
 	var q='insert into '+table+' (user_id,product_id) values (?,?)'
