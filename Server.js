@@ -16,7 +16,8 @@ const db = mysql.createConnection({
 	user: 'root',
 	database: 'ecommerce',
 	password: '1+2=Three',
-	port: '3306'
+	port: '3306',
+	multipleStatements: true
 });
 
 db.connect(function (err) {
@@ -78,17 +79,31 @@ for(var i = 1; i < 14062; i ++){
 	});
 }
 
-**/
+
 app.post('/product',(req, res) => {
 	var {search,page,sort,filterPrice,isAssured,filterRating,filterBrand}=req.body;
+	console.log(req.body)
+	var l=' and product_rating>=4 ';
 	if(search){
 		search=search.charAt(0).toUpperCase() + search.slice(1).toLowerCase();
+	}
+	else{
+		search='';
+	}
+	if(!page){
+		page=1;
+	}
+	if(!sort){
+		sort='popularity';
 	}
 	if(!filterPrice){
 		filterPrice='';
 	}
 	if(!filterRating){
 		filterRating='';
+	}
+	if(!filterBrand){
+		filterBrand='';
 	}
 	var brand='';
 	if(Object.keys(filterBrand).length>0){
@@ -106,23 +121,80 @@ app.post('/product',(req, res) => {
 		db.query('select count(*) as count from products where product_category_tree like BINARY ? '+filterPrice+assured+filterRating+brand,'%'+search+'%',(err, result2) => {
 			
 			db.query('select distinct brand as brand from products where product_category_tree like BINARY ? '+filterPrice+assured+filterRating,'%'+search+'%',(err, result3) => {
-				
+				console.log(result1);
 				res.json([result1,result2[0],result3]);
 			});
 		});
 	});
 });
 
+**/
+function isNumeric(value) {
+	return /^\d+$/.test(value);
+}
 
+app.post('/product',(req,res)=>{
 
-app.post('/openProduct',(req, res) => {
-	var {user_id}=req.body;
-	db.query('select * from products where id =?',user_id,(err, result) => {
-		
+	var {search,page,sort,minPrice,maxPrice,isAssured,filterRating,filterBrand}=req.body;
+
+	search?search='product_category_tree like BINARY "%'+search.charAt(0).toUpperCase() + search.slice(1).toLowerCase()+'%"':search=' ';
+
+	isNumeric(page)?page=' limit '+24*(parseInt(page)-1)+',24':page=' limit  0,24';
+
+	sort=='popularity'||sort=='product_rating DESC'||sort=='discounted_price ASC'||sort=='discounted_price DESC'?sort=' order by '+sort:sort=' order by popularity';
+	
+	isAssured==1?isAssured=' and assured=1':isAssured='';
+
+	isNumeric(filterRating)?filterRating=' and product_rating>='+filterRating:filterRating='';
+
+	if(isNumeric(minPrice)){
+		minPrice=' and discounted_price >='+minPrice;
+	}
+	else{
+		minPrice=' ';
+	}
+	if(isNumeric(maxPrice)){
+		maxPrice=' and discounted_price <='+maxPrice;
+	}
+	else{
+		maxPrice=' ';
+	}
+
+	var brand='';
+	if(filterBrand.length>0){
+		filterBrand.forEach((key)=>{
+			brand+=",'"+key+"'";
+		});
+		brand=brand.replace(",","");
+		brand =" and brand IN ("+brand+")";
+	}
+
+	var names =" id,product_name,retail_price,discounted_price,image,assured,product_rating,product_specifications ";
+
+	var q1='select'+names+'from products where '+search+minPrice+maxPrice+isAssured+filterRating+brand+sort+page+'; ';
+
+	var q2='select count(*) as count from products where '+search+minPrice+maxPrice+isAssured+filterRating+brand+'; ';
+
+	var q3='select distinct brand as brand from products where '+search+'; ';
+console.log(q);
+	var q=q1+q2+q3;
+	console.log(q1);
+	db.query(q,(err, result) => {
+
 		res.json(result);
+
 	});
+
 });
 
+app.post('/openProduct',(req, res) => {
+	var {product_id}=req.body;
+	db.query('select * from products where id =?',product_id,(err, result) => {
+		
+		res.json(result[0]);
+
+	});
+});
 
 app.post('/home',(req, res) => {
 	var {user_id,pageNum}=req.body;
