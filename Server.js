@@ -5,12 +5,16 @@ const passport = require('passport');
 const validator = require('validator');
 const bcrypt = require('bcrypt');
 const cors = require('cors');
+var pluralize = require('pluralize')
 const initializePassport = require('./passport-config');
 app = express();
 
 app.use(express.urlencoded({ extended: false }))
 app.use(express.json());
-app.use(cors());
+app.use(cors({credentials: true, origin: 'http://localhost:3000'}));
+var MySQLStore = require('express-mysql-session')(session);
+// app.use(cors());
+
 const db = mysql.createConnection({
 	host: 'localhost',
 	user: 'root',
@@ -30,6 +34,7 @@ const getUserByEmail = (email, done) => {
 		
 		done(results[0]);
 	});
+	
 }
 
 const getUserByid = (id, done) => {
@@ -39,11 +44,33 @@ const getUserByid = (id, done) => {
 	});
 }
 
+var sessionStore = new MySQLStore({
+	checkExpirationInterval: 900000,
+	expiration: 86400000,
+	createDatabaseTable: true,
+	schema: {
+			tableName: 'sessions',
+			columnNames: {
+					session_id: 'session_id',
+					expires: 'expires',
+					data: 'data'
+			}
+	}
+}, db);
 
 
-
+app.use(session({
+	secret: 'Easy Buy',
+	resave: false,
+	store: sessionStore,
+	saveUninitialized: true,
+	cookie: {
+		maxAge : 86400000
+	}
+}));
 
 app.use(passport.initialize());
+app.use(passport.session());
 
 initializePassport(getUserByEmail, getUserByid);
 
@@ -136,9 +163,17 @@ function isNumeric(value) {
 app.post('/product',(req,res)=>{
 
 	var {search,page,sort,minPrice,maxPrice,isAssured,filterRating,filterBrand}=req.body;
-
-	search?search='product_category_tree like BINARY "%'+search.charAt(0).toUpperCase() + search.slice(1).toLowerCase()+'%"':search=' ';
-
+if(search){
+	if(pluralize.isSingular(search)){
+		search='MATCH(product_name,description,product_category_tree,brand,product_specifications ) AGAINST("'+search+' '+pluralize.plural(search)+'"  IN NATURAL LANGUAGE MODE) ';
+	}
+	else{
+		search='MATCH(product_name,description,product_category_tree,brand,product_specifications ) AGAINST("'+search+' '+pluralize.singular(search)+'"  IN NATURAL LANGUAGE MODE) ';
+	}
+}
+else{
+	search='';
+}
 	isNumeric(page)?page=' limit '+24*(parseInt(page)-1)+',24':page=' limit  0,24';
 
 	sort=='popularity'||sort=='product_rating DESC'||sort=='discounted_price ASC'||sort=='discounted_price DESC'?sort=' order by '+sort:sort=' order by popularity';
@@ -197,9 +232,9 @@ app.post('/openProduct',(req, res) => {
 });
 
 app.post('/home',(req, res) => {
-	var {user_id,pageNum}=req.body;
+	var {pageNum}=req.body;
+	console.log('sdasd',req.isAuthenticated());
 	db.query('select product_name,retail_price,discounted_price,image,product_rating,assured,id from products order by RAND() limit ?,40',24*(pageNum-1),(err, result) => {
-		console.log('yes');
 		res.json(result);
 	});
 });
@@ -271,11 +306,22 @@ app.post('/cartOrderAll',(req, res) => {
 	});
 });
 
+app.post('/isLogin',(req, res) => {
+	console.log('isLogin',req.isAuthenticated())
+		if(req.isAuthenticated()){
+			var q='select id,name,email,number,created_at from user where id='+req?.session?.passport.user;
+			console.log(q);
+			db.query(q,(err, results) => {
+				console.log(results);
+				res.json(results);
+			});
+			
+		}
+});
+
 app.post('/login', (req, res, next) => {
 	passport.authenticate('local', (error, user, authInfo) => {
-		if (!user) {
-			return res.status(403).json([authInfo,null]);
-		}
+		if (!user) return res.status(403).json([authInfo,null]);
 
 		req.logIn(user, (err) => {
 			res.status(200).json([authInfo,user]);
@@ -345,6 +391,11 @@ app.post('/register', (req, res) => {
 	}
 });
 
+app.post('/logout', (req, res) => {
+	console.log('yep');
+  req.logOut();
+	res.status(200).json({message:'hello'});
+});
 
 app.listen(5000,()=>{
   console.log("Server hosted at port : 5000");
