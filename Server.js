@@ -15,10 +15,18 @@ app.use(cors({credentials: true, origin: 'http://localhost:3000'}));
 var MySQLStore = require('express-mysql-session')(session);
 // app.use(cors());
 
+// const db = mysql.createConnection({
+// 	host: 'localhost',
+// 	user: 'root',
+// 	database: 'ecommerce',
+// 	password: '1+2=Three',
+// 	port: '3306',
+// 	multipleStatements: true
+// });
 const db = mysql.createConnection({
-	host: 'localhost',
-	user: 'root',
-	database: 'ecommerce',
+	host: 'db4free.net',
+	user: 'darkfaze',
+	database: 'usermanagment',
 	password: '1+2=Three',
 	port: '3306',
 	multipleStatements: true
@@ -74,88 +82,6 @@ app.use(passport.session());
 
 initializePassport(getUserByEmail, getUserByid);
 
-/**
-for(var i = 1; i < 14062; i ++){
-	
-	db.query('select * from productss where id = ?', i, (error, results) => {
-		
-		var a =	results[0].product_name.replaceAll('@',','),
-			b=	results[0].product_category_tree,
-			c=	parseInt(results[0].retail_price.replaceAll('@',',')),
-			d=	parseInt(results[0].discounted_price.replaceAll('@',',')),
-			e=	results[0].image,
-			f=	(Math.random() * 11)>3?'true':'false',
-			g=	results[0].description.replaceAll('@',','),
-			h=	(Math.round(((Math.random() * 3) + 2)*10)/10)
-			j=	results[0].brand.replaceAll('@',','),
-			k=	results[0].product_specifications,
-			l= Math.floor(Math.random() * 11);
-	
-		e=e.replaceAll('[','').replaceAll(']','').replaceAll('@ ',',');
-		b=b.replaceAll('[','').replaceAll(']','').replaceAll('@ ',',').replaceAll(' >> ',',');
-		k = k.replaceAll('@ ',',').replaceAll('{product_specification=>[','').replaceAll('}]}','').replaceAll('{key=>','').replaceAll(',value=>',':').replaceAll('},','|');
-		//spec = spec.filter((data) => data.includes(':')&&data.split(':')[0]&&data.split(':')[1]);
-		//k=spec.toString();
-
-		var data =[a,b,c,d,e,f,g,h,j,k,l];
-		console.log(data);
-		var q = 'insert into products ( product_name , product_category_tree , retail_price , discounted_price , image , is_FK_Advantage_product , description , product_rating,brand,product_specifications,popularity ) values (?)';
-		db.query(q, [data], function (error, results, fields) {
-			if (error) throw error;
-		});
-	});
-}
-
-
-app.post('/product',(req, res) => {
-	var {search,page,sort,filterPrice,isAssured,filterRating,filterBrand}=req.body;
-	console.log(req.body)
-	var l=' and product_rating>=4 ';
-	if(search){
-		search=search.charAt(0).toUpperCase() + search.slice(1).toLowerCase();
-	}
-	else{
-		search='';
-	}
-	if(!page){
-		page=1;
-	}
-	if(!sort){
-		sort='popularity';
-	}
-	if(!filterPrice){
-		filterPrice='';
-	}
-	if(!filterRating){
-		filterRating='';
-	}
-	if(!filterBrand){
-		filterBrand='';
-	}
-	var brand='';
-	if(Object.keys(filterBrand).length>0){
-		for (const [key, value] of Object.entries(filterBrand)) {
-			brand+=",'"+key+"'";
-		}
-		brand=brand.replace(",","");
-		brand ="and brand IN ("+brand+")";
-	}
-	var assured=isAssured?" and assured = 'true'":"";
-	var names =" id,product_name,retail_price,discounted_price,image,assured,product_rating,product_specifications ";
-	var q='select'+names+'from products where product_category_tree like BINARY ? '+filterPrice+assured+filterRating+brand+' ORDER BY RAND() limit ?,24';
-	db.query(q,['%'+search+'%',24*(page-1)],(error, result1) => {
-		
-		db.query('select count(*) as count from products where product_category_tree like BINARY ? '+filterPrice+assured+filterRating+brand,'%'+search+'%',(err, result2) => {
-			
-			db.query('select distinct brand as brand from products where product_category_tree like BINARY ? '+filterPrice+assured+filterRating,'%'+search+'%',(err, result3) => {
-				console.log(result1);
-				res.json([result1,result2[0],result3]);
-			});
-		});
-	});
-});
-
-**/
 function isNumeric(value) {
 	return /^\d+$/.test(value);
 }
@@ -165,10 +91,10 @@ app.post('/product',(req,res)=>{
 	var {search,page,sort,minPrice,maxPrice,isAssured,filterRating,filterBrand}=req.body;
 if(search){
 	if(pluralize.isSingular(search)){
-		search='MATCH(product_name,description,product_category_tree,brand,product_specifications ) AGAINST("'+search+' '+pluralize.plural(search)+'"  IN NATURAL LANGUAGE MODE) ';
+		search='MATCH(product_name,product_category_tree,brand,product_specifications ) AGAINST("'+search+' '+pluralize.plural(search)+'"  IN NATURAL LANGUAGE MODE) ';
 	}
 	else{
-		search='MATCH(product_name,description,product_category_tree,brand,product_specifications ) AGAINST("'+search+' '+pluralize.singular(search)+'"  IN NATURAL LANGUAGE MODE) ';
+		search='MATCH(product_name,product_category_tree,brand,product_specifications ) AGAINST("'+search+' '+pluralize.singular(search)+'"  IN NATURAL LANGUAGE MODE) ';
 	}
 }
 else{
@@ -176,7 +102,7 @@ else{
 }
 	isNumeric(page)?page=' limit '+24*(parseInt(page)-1)+',24':page=' limit  0,24';
 
-	sort=='popularity'||sort=='product_rating DESC'||sort=='discounted_price ASC'||sort=='discounted_price DESC'?sort=' order by '+sort:sort=' order by popularity';
+	sort=='product_rating DESC'||sort=='discounted_price ASC'||sort=='discounted_price DESC'?sort=' order by '+sort:sort='';
 	
 	isAssured==1?isAssured=' and assured=1':isAssured='';
 
@@ -204,9 +130,9 @@ else{
 		brand =" and brand IN ("+brand+")";
 	}
 
-	var names =" id,product_name,retail_price,discounted_price,image,assured,product_rating,product_specifications ";
+	var names =" products.id,product_name,retail_price,discounted_price,assured,product_rating,product_specifications,url ";
 
-	var q1='select'+names+'from products where '+search+minPrice+maxPrice+isAssured+filterRating+brand+sort+page+'; ';
+	var q1='select'+names+'from products inner join images on products.id=images.product_id where top=TRUE and '+search+minPrice+maxPrice+isAssured+filterRating+brand+sort+page+'; ';
 
 	var q2='select count(*) as count from products where '+search+minPrice+maxPrice+isAssured+filterRating+brand+'; ';
 
@@ -224,17 +150,18 @@ console.log(q);
 
 app.post('/openProduct',(req, res) => {
 	var {product_id}=req.body;
-	db.query('select * from products where id =?',product_id,(err, result) => {
-		
-		res.json(result[0]);
-
+	db.query('select products.id,product_name,retail_price,discounted_price,assured,product_rating,description,product_specifications from products where id = ?',product_id,(err, result) => {
+		db.query('select url from images where product_id = ?',product_id,(err, results) => {
+			console.log([result[0],results])
+			res.json([result[0],results]);
+		});
 	});
 });
 
 app.post('/home',(req, res) => {
 	var {pageNum}=req.body;
 	console.log('sdasd',req.isAuthenticated());
-	db.query('select product_name,retail_price,discounted_price,image,product_rating,assured,id from products order by RAND() limit ?,40',24*(pageNum-1),(err, result) => {
+	db.query('select product_name,retail_price,discounted_price,product_rating,assured,products.id,url from products inner join images on products.id=images.product_id where top=TRUE order by RAND() limit 40',(err, result) => {
 		res.json(result);
 	});
 });
@@ -274,7 +201,7 @@ app.post('/deleteFromCart',(req, res) => {
 
 app.post('/openCart',(req, res) => {
 	var {user_id}=req.body;
-	db.query('select count(product_id) as quantity,cart.id as cart_id,image,product_name,retail_price,discounted_price,products.id as product_id from products inner join cart on products.id=cart.product_id where cart.user_id=? group by product_id order by max(created_at) desc',user_id,(err, result) => {
+	db.query('select count(cart.product_id) as quantity,cart.id as cart_id,product_name,retail_price,discounted_price,products.id as product_id,url from products inner join cart on products.id=cart.product_id inner join images on products.id=images.product_id where top = TRUE and cart.user_id= ? group by cart.product_id order by max(created_at) desc;',user_id,(err, result) => {
 		res.status(200).json(result);
 	});
 });
@@ -289,7 +216,7 @@ app.post('/cartBill',(req, res) => {
 app.post('/openOrders',(req, res) => {
 	var {user_id}=req.body;
 	console.log(req.body);
-	db.query('select orders.id as orders_id,image,product_name,price,products.id,quantity,created_at as date from products inner join orders on products.id=orders.product_id where orders.user_id=? order by created_at desc',user_id,(err, result) => {
+	db.query('select orders.id as orders_id,product_name,price,products.id,quantity,created_at as date,url from products inner join orders on products.id=orders.product_id inner join images on products.id=images.product_id where top = TRUE and orders.user_id=? order by created_at desc',user_id,(err, result) => {
 		res.status(200).json(result);
 	});
 });
