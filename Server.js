@@ -13,24 +13,25 @@ app.use(express.urlencoded({ extended: false }))
 app.use(express.json());
 app.use(cors({credentials: true, origin: 'http://localhost:3000'}));
 var MySQLStore = require('express-mysql-session')(session);
-// app.use(cors());
 
-// const db = mysql.createConnection({
-// 	host: 'localhost',
-// 	user: 'root',
-// 	database: 'ecommerce',
-// 	password: '1+2=Three',
-// 	port: '3306',
-// 	multipleStatements: true
-// });
+// app.use(cors());
 const db = mysql.createConnection({
-	host: 'db4free.net',
-	user: 'darkfaze',
-	database: 'usermanagment',
+	host: 'localhost',
+	user: 'root',
+	database: 'ecommerce',
 	password: '1+2=Three',
 	port: '3306',
 	multipleStatements: true
 });
+
+// const db = mysql.createConnection({
+// 	host: 'db4free.net',
+// 	user: 'darkfaze',
+// 	database: 'usermanagment',
+// 	password: '1+2=Three',
+// 	port: '3306',
+// 	multipleStatements: true
+// });
 
 db.connect(function (err) {
 	if (err) throw err;
@@ -39,15 +40,12 @@ db.connect(function (err) {
 
 const getUserByEmail = (email, done) => {
 	db.query('select id,name,email,password,number from user where email = ?', email, (error, results) => {
-		
 		done(results[0]);
 	});
-	
 }
 
 const getUserByid = (id, done) => {
 	db.query('select id,name,email,password,number from user where id = ?', id, (error, results) => {
-		
 		done(results[0]);
 	});
 }
@@ -141,11 +139,8 @@ console.log(q);
 	var q=q1+q2+q3;
 	console.log(q1);
 	db.query(q,(err, result) => {
-
 		res.json(result);
-
 	});
-
 });
 
 app.post('/openProduct',(req, res) => {
@@ -166,15 +161,26 @@ app.post('/home',(req, res) => {
 	});
 });
 
-app.post('/addTo',(req, res) => {
-	var {user_id,product_id,table}=req.body;
-	var q='insert into '+table+' (user_id,product_id) values (?,?)'
-	db.query(q,[user_id,product_id],(err, result) => {
-		console.log(q,req.body);
+app.post('/addToCart',(req, res) => {
+	var {user_id,product_id,quantity}=req.body;
+	db.query('INSERT INTO cart(user_id,product_id,quantity) VALUES (?,?,?);',[user_id,product_id,quantity],(err, result)=>{
 		res.status(200).json({
 			status: 0,
 		});
 	});
+});
+
+app.post('/alterQty',(req, res) => {
+	var {user_id,product_id,cart_id,quantity}=req.body;
+	if(quantity>0){
+		console.log('alterQTY',req.body);
+		db.query('update cart set quantity = ? WHERE user_id = ? and product_id = ? and id = ?;',[quantity,user_id,product_id,cart_id],(err, result)=>{
+			res.status(200).json({
+				status: 0,
+			});
+		});
+	}
+
 });
 
 app.post('/buyNow',(req, res) => {
@@ -189,10 +195,9 @@ app.post('/buyNow',(req, res) => {
 });
 
 app.post('/deleteFromCart',(req, res) => {
-	var {product_id,limit}=req.body;
+	var {user_id,product_id,cart_id}=req.body;
 	console.log('remove',req.body);
-	db.query('delete from cart where product_id=? '+limit,product_id,(err, result) => {
-		
+	db.query('delete from cart WHERE user_id = ? and product_id = ? and id = ?;',[user_id,product_id,cart_id],(err, result) => {
 		res.status(200).json({
 			status: 0,
 		});
@@ -201,14 +206,8 @@ app.post('/deleteFromCart',(req, res) => {
 
 app.post('/openCart',(req, res) => {
 	var {user_id}=req.body;
-	db.query('select count(cart.product_id) as quantity,cart.id as cart_id,product_name,retail_price,discounted_price,products.id as product_id,url from products inner join cart on products.id=cart.product_id inner join images on products.id=images.product_id where top = TRUE and cart.user_id= ? group by cart.product_id order by max(created_at) desc;',user_id,(err, result) => {
-		res.status(200).json(result);
-	});
-});
-
-app.post('/cartBill',(req, res) => {
-	var {user_id}=req.body;
-	db.query('select count(product_id) as quantity,retail_price,discounted_price from products inner join cart on products.id=cart.product_id where cart.user_id=? group by product_id',user_id,(err, result) => {
+	db.query('select cart.id as cart_id,product_name,retail_price,discounted_price,products.id as product_id,quantity,url from products inner join cart on products.id=cart.product_id inner join images on products.id=images.product_id where top = TRUE and cart.user_id=? order by created_at desc',[user_id],(err, result) => {
+		console.log('cart',result)
 		res.status(200).json(result);
 	});
 });
@@ -223,7 +222,7 @@ app.post('/openOrders',(req, res) => {
 
 app.post('/cartOrderAll',(req, res) => {
 	var {user_id}=req.body;
-	var q='insert into orders (user_id,product_id,quantity,price) select user_id,products.id,count(product_id) as quantity,discounted_price from products inner join cart on products.id=cart.product_id where cart.user_id=? group by product_id';
+	var q='insert into orders (user_id,product_id,quantity,price) select user_id,products.id,quantity,discounted_price from products inner join cart on products.id=cart.product_id where cart.user_id=? order by created_at desc';
 	db.query(q,user_id,(err, result) => {
 		db.query('delete from cart where user_id = ?',user_id,(err, results) => {
 			res.status(200).json({
