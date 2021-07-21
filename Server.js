@@ -8,6 +8,7 @@ const cors = require('cors');
 var pluralize = require('pluralize')
 const initializePassport = require('./passport-config');
 app = express();
+require('dotenv').config()
 
 app.use(express.urlencoded({ extended: false }))
 app.use(express.json());
@@ -15,22 +16,14 @@ app.use(cors({credentials: true, origin: 'http://localhost:3000'}));
 var MySQLStore = require('express-mysql-session')(session);
 
 const db = mysql.createConnection({
-	host: 'localhost',
-	user: 'root',
-	database: 'ecommerce',
-	password: '1+2=Three',
-	port: '3306',
+	host: process.env.DB_HOST,
+	user: process.env.DB_USER,
+	database: process.env.DB_NAME,
+	password: process.env.DB_PASS,
+	port: process.env.DB_PORT,
 	multipleStatements: true
 });
 
-// const db = mysql.createConnection({
-// 	host: 'db4free.net',
-// 	user: 'darkfaze',
-// 	database: 'usermanagment',
-// 	password: '1+2=Three',
-// 	port: '3306',
-// 	multipleStatements: true
-// });
 
 db.connect(function (err) {
 	if (err) throw err;
