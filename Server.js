@@ -58,7 +58,7 @@ var sessionStore = new MySQLStore({
 
 
 app.use(session({
-	secret: 'Easy Buy',
+	secret: 'Dukaan',
 	resave: false,
 	store: sessionStore,
 	saveUninitialized: true,
@@ -317,6 +317,6 @@ app.post('/logout', (req, res) => {
 	});
 });
 
-app.listen(5000,()=>{
+app.listen(process.env.PORT || 5000,()=>{
   console.log("Server hosted at port : 5000");
 });
