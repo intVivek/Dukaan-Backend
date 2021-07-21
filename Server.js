@@ -14,7 +14,6 @@ app.use(express.json());
 app.use(cors({credentials: true, origin: 'http://localhost:3000'}));
 var MySQLStore = require('express-mysql-session')(session);
 
-// app.use(cors());
 const db = mysql.createConnection({
 	host: 'localhost',
 	user: 'root',
@@ -318,9 +317,11 @@ app.post('/register', (req, res) => {
 });
 
 app.post('/logout', (req, res) => {
-	console.log('yep');
   req.logOut();
-	res.status(200).json({message:'hello'});
+	res.status(200).json(
+		{status:0,
+		message:'Succesfully Logged out'
+	});
 });
 
 app.listen(5000,()=>{
