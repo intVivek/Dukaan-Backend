@@ -14,12 +14,7 @@ require('dotenv').config()
 app.use(express.urlencoded({ extended: false }))
 app.use(express.json());
 // app.use(cors({credentials: true, origin: process.env.APP_URL}));
-app.use((req, res, next) => {
-	res.setHeader('Access-Control-Allow-Origin', process.env.APP_URL);
-	res.setHeader('Access-Control-Allow-Headers', 'content-type');
-	res.setHeader('Access-Control-Allow-Credentials', true);
-	next();
-});
+
 var MySQLStore = require('express-mysql-session')(session);
 
 const db = mysql.createConnection({
@@ -82,7 +77,12 @@ initializePassport(getUserByEmail, getUserByid);
 function isNumeric(value) {
 	return /^\d+$/.test(value);
 }
-
+app.use((req, res, next) => {
+	res.setHeader('Access-Control-Allow-Origin', process.env.APP_URL);
+	res.setHeader('Access-Control-Allow-Headers', 'content-type');
+	res.setHeader('Access-Control-Allow-Credentials', true);
+	next();
+});
 app.post('/product',(req,res)=>{
 
 	var {search,page,sort,minPrice,maxPrice,isAssured,filterRating,filterBrand}=req.body;
