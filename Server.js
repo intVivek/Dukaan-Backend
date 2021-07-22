@@ -84,7 +84,7 @@ function isNumeric(value) {
 }
 
 app.post('/product',(req,res)=>{
-
+	console.log('product');
 	var {search,page,sort,minPrice,maxPrice,isAssured,filterRating,filterBrand}=req.body;
 if(search){
 	if(pluralize.isSingular(search)){
