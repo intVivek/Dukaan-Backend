@@ -16,8 +16,7 @@ app.use(express.json());
 // app.use(cors({credentials: true, origin: process.env.APP_URL}));
 app.use((req, res, next) => {
 	res.setHeader('Access-Control-Allow-Origin', process.env.APP_URL);
-	res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-	res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
+	res.setHeader('Access-Control-Allow-Headers', 'content-type');
 	res.setHeader('Access-Control-Allow-Credentials', true);
 	next();
 });
