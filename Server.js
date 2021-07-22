@@ -12,7 +12,7 @@ require('dotenv').config()
 
 app.use(express.urlencoded({ extended: false }))
 app.use(express.json());
-app.use(cors({credentials: true, origin: process.env.FrontEnd_URL}));
+app.use(cors({credentials: true, origin: 'https://dukaan-app.netlify.app/'}));
 var MySQLStore = require('express-mysql-session')(session);
 
 const db = mysql.createConnection({
