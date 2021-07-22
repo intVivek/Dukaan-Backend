@@ -10,7 +10,7 @@ const initializePassport = require('./passport-config');
 app = express();
 require('dotenv').config()
 
-app.use(express.static(path.join(__dirname, '/../../build')));
+app.use(express.static(path.join(__dirname, 'client/build')));
 app.use(express.urlencoded({ extended: false }))
 app.use(express.json());
 app.use(cors({credentials: true, origin: 'https://dukaan-app.netlify.app'}));
