@@ -1,10 +1,10 @@
 {
-  "name": "easy-buy-backend",
+  "name": "dukaan-backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "Server.js",
   "scripts": {
-    "start" : "node server.js",
+    "start" : "node Server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
