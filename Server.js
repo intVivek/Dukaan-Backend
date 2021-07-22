@@ -1,4 +1,5 @@
 const mysql = require('mysql');
+const http = require('http');
 const express = require('express');
 const session = require('express-session');
 const passport = require('passport');
@@ -317,6 +318,12 @@ app.post('/logout', (req, res) => {
 	});
 });
 
+
+app.get("/image", (req, res) => {
+    http.get(req.query.url, (stream) => {
+        stream.pipe(res);
+    });
+});
 
 app.get('/',(req, res) => {
 	res.send('hello');
