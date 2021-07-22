@@ -13,7 +13,13 @@ require('dotenv').config()
 
 app.use(express.urlencoded({ extended: false }))
 app.use(express.json());
-app.use(cors({credentials: true, origin: process.env.APP_URL}));
+// app.use(cors({credentials: true, origin: process.env.APP_URL}));
+app.use((req, res, next) => {
+	console.log(process.env.APP_URL);
+	res.setHeader('Access-Control-Allow-Origin', process.env.APP_URL);
+	res.setHeader('Access-Control-Allow-Credentials', true);
+	next();
+});
 var MySQLStore = require('express-mysql-session')(session);
 
 const db = mysql.createConnection({
