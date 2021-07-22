@@ -12,7 +12,7 @@ require('dotenv').config()
 
 app.use(express.urlencoded({ extended: false }))
 app.use(express.json());
-app.use(cors({credentials: true, origin: 'https://dukaan-app.netlify.app'}));
+app.use(cors({credentials: true, origin: process.env.FrontEnd_URL}));
 var MySQLStore = require('express-mysql-session')(session);
 
 const db = mysql.createConnection({
@@ -47,7 +47,7 @@ var sessionStore = new MySQLStore({
 	expiration: 86400000,
 	createDatabaseTable: true,
 	schema: {
-			tableName: 'sessions',
+			tableName: process.env.sessions_table,
 			columnNames: {
 					session_id: 'session_id',
 					expires: 'expires',
@@ -58,7 +58,7 @@ var sessionStore = new MySQLStore({
 
 
 app.use(session({
-	secret: 'Dukaan',
+	secret: process.env.sessions_key,
 	resave: false,
 	store: sessionStore,
 	saveUninitialized: true,
@@ -255,7 +255,7 @@ app.post('/register', (req, res) => {
 				if (password.length>5) {
 					 getUserByEmail(email, async (user) => {
 						if (!user) {
-							const hashedPass = await bcrypt.hash(password, 10);
+							const hashedPass = await bcrypt.hash(password, process.env.hash_key);
 							var data = [name, email, hashedPass, number];
 							var q = 'insert into user ( name , email , password , number ) values (?)';
 							db.query(q, [data], function (error, results, fields) {
