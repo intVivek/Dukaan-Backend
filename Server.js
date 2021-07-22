@@ -317,6 +317,11 @@ app.post('/logout', (req, res) => {
 	});
 });
 
+
+app.get('/',(req, res) => {
+	res.send('hello');
+});
+
 app.listen(process.env.PORT || 5000,()=>{
   console.log("Server hosted at port : 5000");
 });
