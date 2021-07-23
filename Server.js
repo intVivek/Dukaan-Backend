@@ -63,14 +63,16 @@ var sessionStore = new MySQLStore({
 	}
 }, db);
 
-
+app.set("trust proxy", 1);
 app.use(session({
 	secret: process.env.sessions_key,
 	resave: false,
 	store: sessionStore,
 	saveUninitialized: true,
 	cookie: {
-		maxAge : 86400000
+		maxAge : 86400000,
+		sameSite: 'none', 
+		secure: true
 	}
 }));
 
