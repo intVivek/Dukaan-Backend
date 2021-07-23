@@ -15,7 +15,6 @@ function initialize(getUserByEmail, getUserById) {
 			}
 			try {	
 				if (await bcrypt.compare(password, user.password)) {
-					console.log('User2', user);
 					return done(null, user,{ 
 						status : 0,
 						message: 'Login successfull' })

@@ -27,8 +27,7 @@ const db = mysql.createConnection({
 	user: process.env.DB_USER,
 	database: process.env.DB_NAME,
 	password: process.env.DB_PASS,
-	port: process.env.DB_PORT,
-	multipleStatements: true
+	port: process.env.DB_PORT
 });
 
 
@@ -39,12 +38,14 @@ db.connect(function (err) {
 
 const getUserByEmail = (email, done) => {
 	db.query('select id,name,email,password,number from user where email = ?', email, (error, results) => {
+		if (error) throw error;
 		done(results[0]);
 	});
 }
 
 const getUserByid = (id, done) => {
 	db.query('select id,name,email,password,number from user where id = ?', id, (error, results) => {
+		if (error) throw error;
 		done(results[0]);
 	});
 }
@@ -86,7 +87,6 @@ function isNumeric(value) {
 }
 
 app.post('/product',(req,res)=>{
-	console.log('product');
 	var {search,page,sort,minPrice,maxPrice,isAssured,filterRating,filterBrand}=req.body;
 if(search){
 	if(pluralize.isSingular(search)){
@@ -136,11 +136,16 @@ else{
 	var q2='select count(*) as count from products where '+search+minPrice+maxPrice+isAssured+filterRating+brand+'; ';
 
 	var q3='select distinct brand as brand from products where '+search+'; ';
-console.log(q);
-	var q=q1+q2+q3;
-	console.log(q1);
-	db.query(q,(err, result) => {
-		res.json(result);
+	db.query(q1,(err, result1) => {
+		if (err) throw err;
+		db.query(q2,(err, result2) => {
+			if (err) throw err;
+			db.query(q3,(err, result3) => {
+				if (err) throw err;
+				res.json([result1,result2,result3]);
+			});
+		});
+
 	});
 });
 
@@ -148,7 +153,7 @@ app.post('/openProduct',(req, res) => {
 	var {product_id}=req.body;
 	db.query('select products.id,product_name,retail_price,discounted_price,assured,product_rating,description,product_specifications from products where id = ?',product_id,(err, result) => {
 		db.query('select url from images where product_id = ?',product_id,(err, results) => {
-			console.log([result[0],results])
+			if (err) throw err;
 			res.json([result[0],results]);
 		});
 	});
@@ -156,26 +161,40 @@ app.post('/openProduct',(req, res) => {
 
 app.post('/home',(req, res) => {
 	var {pageNum}=req.body;
-	console.log('sdasd',req.isAuthenticated());
 	db.query('select product_name,retail_price,discounted_price,product_rating,assured,products.id,url from products inner join images on products.id=images.product_id where top=TRUE order by RAND() limit 40',(err, result) => {
+		if (err) throw err;
 		res.json(result);
 	});
 });
 
 app.post('/addToCart',(req, res) => {
-	var {user_id,product_id,quantity}=req.body;
-	db.query('INSERT INTO cart(user_id,product_id,quantity) VALUES (?,?,?);',[user_id,product_id,quantity],(err, result)=>{
-		res.status(200).json({
-			status: 0,
-		});
+	var {user_id,product_id}=req.body;
+	db.query('select quantity from cart where user_id = ? and product_id = ?',[user_id,product_id],(err,result)=>{
+		if (err) throw err;
+		if(result[0]){
+			db.query('update cart set quantity =? where user_id = ? and product_id = ?;',[result[0].quantity+1,user_id,product_id],(err, result)=>{
+				if (err) throw err;
+				res.status(200).json({
+					status: 0,
+				});
+			});
+		}
+		else{
+			db.query('INSERT INTO cart(user_id,product_id,quantity) VALUES (?,?,?);',[user_id,product_id,1],(err, result)=>{
+				if (err) throw err;
+				res.status(200).json({
+					status: 0,
+				});
+			});
+		}
 	});
 });
 
 app.post('/alterQty',(req, res) => {
 	var {user_id,product_id,cart_id,quantity}=req.body;
 	if(quantity>0){
-		console.log('alterQTY',req.body);
 		db.query('update cart set quantity = ? WHERE user_id = ? and product_id = ? and id = ?;',[quantity,user_id,product_id,cart_id],(err, result)=>{
+			if (err) throw err;
 			res.status(200).json({
 				status: 0,
 			});
@@ -188,7 +207,7 @@ app.post('/buyNow',(req, res) => {
 	var {user_id,product_id,price,quantity}=req.body;
 	var q='insert into orders (user_id,product_id,price,quantity) values (?,?,?,?)'
 	db.query(q,[user_id,product_id,price,quantity],(err, result) => {
-		console.log(q,req.body);
+		if (err) throw err;
 		res.status(200).json({
 			status: 0,
 		});
@@ -197,8 +216,8 @@ app.post('/buyNow',(req, res) => {
 
 app.post('/deleteFromCart',(req, res) => {
 	var {user_id,product_id,cart_id}=req.body;
-	console.log('remove',req.body);
 	db.query('delete from cart WHERE user_id = ? and product_id = ? and id = ?;',[user_id,product_id,cart_id],(err, result) => {
+		if (err) throw err;
 		res.status(200).json({
 			status: 0,
 		});
@@ -208,15 +227,15 @@ app.post('/deleteFromCart',(req, res) => {
 app.post('/openCart',(req, res) => {
 	var {user_id}=req.body;
 	db.query('select cart.id as cart_id,product_name,retail_price,discounted_price,products.id as product_id,quantity,url from products inner join cart on products.id=cart.product_id inner join images on products.id=images.product_id where top = TRUE and cart.user_id=? order by created_at desc',[user_id],(err, result) => {
-		console.log('cart',result)
+		if (err) throw err;
 		res.status(200).json(result);
 	});
 });
 
 app.post('/openOrders',(req, res) => {
 	var {user_id}=req.body;
-	console.log(req.body);
 	db.query('select orders.id as orders_id,product_name,price,products.id,quantity,created_at as date,url from products inner join orders on products.id=orders.product_id inner join images on products.id=images.product_id where top = TRUE and orders.user_id=? order by created_at desc',user_id,(err, result) => {
+		if (err) throw err;
 		res.status(200).json(result);
 	});
 });
@@ -225,7 +244,9 @@ app.post('/cartOrderAll',(req, res) => {
 	var {user_id}=req.body;
 	var q='insert into orders (user_id,product_id,quantity,price) select user_id,products.id,quantity,discounted_price from products inner join cart on products.id=cart.product_id where cart.user_id=? order by created_at desc';
 	db.query(q,user_id,(err, result) => {
+		if (err) throw err;
 		db.query('delete from cart where user_id = ?',user_id,(err, results) => {
+			if (err) throw err;
 			res.status(200).json({
 				status: 0,
 			});
@@ -234,12 +255,10 @@ app.post('/cartOrderAll',(req, res) => {
 });
 
 app.post('/isLogin',(req, res) => {
-	console.log('isLogin',req.isAuthenticated())
 		if(req.isAuthenticated()){
 			var q='select id,name,email,number,created_at from user where id='+req?.session?.passport.user;
-			console.log(q);
 			db.query(q,(err, results) => {
-				console.log(results);
+				if (err) throw err;
 				res.json(results);
 			});
 			
@@ -249,7 +268,6 @@ app.post('/isLogin',(req, res) => {
 app.post('/login', (req, res, next) => {
 	passport.authenticate('local', (error, user, authInfo) => {
 		if (!user) return res.status(403).json([authInfo,null]);
-
 		req.logIn(user, (err) => {
 			res.status(200).json([authInfo,user]);
 		});
@@ -258,7 +276,6 @@ app.post('/login', (req, res, next) => {
 
 app.post('/register', (req, res) => {
 	const { name, email, number, password } = req.body;
-	console.log(req.body);
 	if(name!==''){
 		if (validator.isEmail(email)) {
 			if (validator.isMobilePhone(number)) {
@@ -269,7 +286,6 @@ app.post('/register', (req, res) => {
 							var data = [name, email, hashedPass, number];
 							var q = 'insert into user ( name , email , password , number ) values (?)';
 							db.query(q, [data], function (error, results, fields) {
-								
 								if (error) throw error;
 								else {
 									res.status(200).json({
