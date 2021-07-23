@@ -258,13 +258,14 @@ app.post('/login', (req, res, next) => {
 
 app.post('/register', (req, res) => {
 	const { name, email, number, password } = req.body;
+	console.log(req.body);
 	if(name!==''){
 		if (validator.isEmail(email)) {
 			if (validator.isMobilePhone(number)) {
 				if (password.length>5) {
 					 getUserByEmail(email, async (user) => {
 						if (!user) {
-							const hashedPass = await bcrypt.hash(password, process.env.hash_key);
+							const hashedPass = await bcrypt.hash(password, 10);
 							var data = [name, email, hashedPass, number];
 							var q = 'insert into user ( name , email , password , number ) values (?)';
 							db.query(q, [data], function (error, results, fields) {
