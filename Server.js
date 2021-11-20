@@ -5,7 +5,6 @@ const session = require('express-session');
 const passport = require('passport');
 const validator = require('validator');
 const bcrypt = require('bcrypt');
-const cors = require('cors');
 var pluralize = require('pluralize')
 const initializePassport = require('./passport-config');
 app = express();
