@@ -134,7 +134,7 @@ else{
 
 	var q2='select count(*) as count from products where '+search+minPrice+maxPrice+isAssured+filterRating+brand+'; ';
 
-	var q3='select distinct brand as brand from products where '+search+'; ';
+	var q3=`select distinct brand as brand from products where ${search+minPrice+maxPrice+isAssured+filterRating+brand}; `;
 	db.query(q1,(err, result1) => {
 		if (err) throw err;
 		db.query(q2,(err, result2) => {
